@@ -1,0 +1,179 @@
+FORMAT: 1A
+HOST: https://simplisafe.com
+
+# SimpliSafe API
+
+I've been a customer of [SimpliSafe](http://simplisafe.com) for a year now and I've found it rather annoying they do not integrate with anyone. The most annoying thing was that I couldn't use them with [IFTTT](https://ifttt.com) to do simple but useful integrations with my other smart devices.
+
+After a year of waiting, I decided I'd do it myself, so I downloaded their mobile application and ripped it apart looking at the code that I could and broke out their API spec. Here it is. I plan to build a simple service that will allow you to make use of this more, I suspect SimpliSafe will change their API a few times to try and break this, so if you really want these features you should contact them and let them know.
+
+WARNING: This is unofficial, with zero support, they may reprimand users who take advantage of this, etc etc etc. Use at your own risk.
+
+Note: This requires a paid subscription to use the command features for your security system.
+
+The SimpliSafe API is very simple and straight forward, you run a `/login` request which will give you a session, using that session you can proceed to get a list of locations which will give you a location id, the two combined can be used to set or get the state of your security system. There is an `/events` method that can be used to get alerts.
+
+# Group SimpliSafe API
+
+## Login [/mobile/login]
+
+### Login [POST]
+
+Perform a login request. Possible `response_code`s are:
+
+- `1`: Success
+- `2`: Success (Upgrade available, check responses `current_version` in response for latest number)
+- `3`: Success (Upgrade required)
+- `4`: Invalid login details.
+
+You will need to save the `session` and the `uid` responded for use in future requests.
+
++ Parameters
+	+ name: `123` (string, required) Your account username (usually an email)
+	+ pass: `123` (string, required) Your account password
+	+ version: `1200` (number, required) Application version. This is required, latest is `1200`.
+	+ device_name: `Awesome` (string) A device name sent by the mobile application, presumably to record it for analytics.
+	+ device_uuid: `900000AE09BA` (string) A device UUID, provided by the device itself, presumably to record it for analytics.
+
++ Response 200 (application/json)
+
+	+ Body
+
+		{
+			"return_code": 1,
+			"session": "999999999999999999999",
+			"uid": "999999",
+			"username": "hello@example.cm"
+		}
+
+## Locations [/mobile/{uid}/locations]
+
+### Get Locations [POST]
+
+Used to get a list of locations (homes) configured to your account. While this ideally should be a `GET`, it's a `POST` without any additional parameters.
+
+These locations have unique identifiers provided, referred to as `sid` in the rest of this documentation.
+
++ Parameters
+
+	+ uid: `999999` (number) Session `uid` provided by the login request.
+
++ Response 200 (application/json)
+
+	+ Body
+
+		{
+			"num_locations": 1,
+			"locations": {
+				"555555": {
+					"street1": "1 Main Street",
+					"street2": "",
+					"city": "PopularTown",
+					"state": "ZZ",
+					"postal_code": "00000",
+					"s_status": "20",
+					"system_state": "Home"
+				}
+			}
+		}
+
+### Get Location Inforation [POST /mobile/{uid}/sid/{sid}/dashboard]
+
+Get information about a specific location, including your current plan, alerts, status, state and some recent history.
+
+**NOTE** You must include the `sid` in the URL and as a request body parameter.
+
++ Parameters
+	+ uid: `999999` (number) Session `uid` provided by the login request.
+	+ sid: `555555` (number) Location ID (`sid`) provided by the get locations request.
+
++ Request
+
+	+ Body
+
+		+ sid: `555555` (number, required) The `sid` used, matching the one you provided in the URL.
+
++  Response 200 (application/json)
+
+	+ Body
+
+		{
+			"return_code": 1,
+			"location": {
+				"...": "..."
+			}
+		}
+
+## Location State [/mobile/{uid}/sid/{sid}/set-state]
+
+## Set System State [POST]
+
+Set the state of your system to one of the supported states.
+
+Supported states are:
+
+- `off`
+- `home`
+- `away`
+
+The possible `response_code`s are:
+
+- `2`: Successfully changed state to `off`.
+- `3`: Successfully changed state to `away`.
+- `4`: Successfully changed state to `home`.
+- `5`: Successful exit delay.
+- `-9`: User needs to pay for command features.
+
++ Parameters
+	+ uid: `999999` (number) Session `uid` provided by the login request.
+	+ sid: `555555` (number) Location ID (`sid`) provided by the get locations request.
+
++ Request
+
+	state=off&mobile=1
+
++ Response 200 (application/json)
+
+	+ Body
+
+		{
+			"response_code": 2
+		}
+
+## Get System State [POST /mobile/{uid}/sid/{sid}/get-state]
+
+Used to get the current system state.
+
+Response codes are the same for `Set System State` above.
+
++ Parameters
+	+ uid: `999999` (number) Session `uid` provided by the login request.
+	+ sid: `555555` (number) Location ID (`sid`) provided by the get locations request.
+
++ Request
+
+	mobile=1
+
++ Response 200 (application/json)
+
+	+ Body
+
+		{
+			"response_code": 2
+		}
+
+## Location Events [/mobile/{uid}/sid/{sid}/events]
+
+### Get Event History [GET]
+
+Get the event history for the given location.
+
++ Parameters
+	+ uid: `999999` (number) Session `uid` provided by the login request.
+	+ sid: `555555` (number) Location ID (`sid`) provided by the get locations request.
+
++ Response 200 (application/json)
+
+	+ Body
+
+		{}
